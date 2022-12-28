@@ -19,7 +19,7 @@
 %% -------------------------------------------------------------------
 
 %% @doc Main management module.
-%% TODO: 
+%% TODO:
 %% - WS Client Compression
 %% - Simplify HTTP/WS listeners not using Cowboy's process but only cowlib?
 
@@ -43,6 +43,7 @@
 -export_type([listen_opts/0, connect_opts/0, send_opts/0, resolve_opts/0]).
 -export_type([connect_spec/0, send_spec/0]).
 -export_type([incoming/0, outcoming/0]).
+-export_type([user_state/0]).
 
 -include_lib("nklib/include/nklib.hrl").
 -include("nkpacket.hrl").
@@ -60,8 +61,8 @@
 %% Listeners and connections have an associated class.
 %% When sending a message, if a previous connection to the same remote
 %% and class exists, it will be reused.
-%% When starting an outgoing connection, if a suitable listening transport 
-%% is found with the same class, some values from listener's metadata will 
+%% When starting an outgoing connection, if a suitable listening transport
+%% is found with the same class, some values from listener's metadata will
 %% be copied to the new connection: user_state, idle_timeout, host, path, ws_proto,
 %% refresh_fun, tcp_packet, tls_opts
 -type class() :: term().
@@ -165,7 +166,7 @@
         debug => boolean(),
 
         % TCP/TLS/WS/WSS options
-        tcp_packet => 1 | 2 | 4 | raw,    
+        tcp_packet => 1 | 2 | 4 | raw,
         send_timeout => integer(),
         send_timeout_close => boolean(),
         tos => integer(),
@@ -267,12 +268,12 @@ register_protocol(Class, Scheme, Protocol) when is_atom(Scheme), is_atom(Protoco
 
 
 %% @doc
-get_protocol(Scheme) -> 
+get_protocol(Scheme) ->
     nkpacket_app:get({protocol, Scheme}).
 
 
 %% @doc
-get_protocol(Class, Scheme) -> 
+get_protocol(Class, Scheme) ->
     nkpacket_app:get_srv(Class, {protocol, Scheme}).
 
 
@@ -416,7 +417,7 @@ get_id_pids(Id) ->
 
 
 %% @doc Gets all registered transports
--spec get_all() -> 
+-spec get_all() ->
     [{id(), class(), pid()}].
 
 get_all() ->
@@ -438,7 +439,7 @@ get_class_ids(Class) ->
 get_classes() ->
     lists:foldl(
         fun({Id, Class, _Pid}, Acc) ->
-            maps:put(Class, [Id|maps:get(Class, Acc, [])], Acc) 
+            maps:put(Class, [Id|maps:get(Class, Acc, [])], Acc)
         end,
         #{},
         get_all()).
@@ -579,7 +580,7 @@ get_debug(Id) ->
 
 
 %% @private Finds a listening transport of Proto.
--spec get_listening(protocol(), transport()) -> 
+-spec get_listening(protocol(), transport()) ->
     [nkport()].
 
 get_listening(Protocol, Transp) ->
@@ -587,7 +588,7 @@ get_listening(Protocol, Transp) ->
 
 
 %% @private Finds a listening transport of Proto.
--spec get_listening(protocol(), transport(), #{class=>class(), ip=>4|6|tuple()}) -> 
+-spec get_listening(protocol(), transport(), #{class=>class(), ip=>4|6|tuple()}) ->
     [nkport()].
 
 get_listening(Protocol, Transp, Opts) ->
@@ -599,15 +600,15 @@ get_listening(Protocol, Transp, Opts) ->
         Ip when is_tuple(Ip), size(Ip)==8 -> nkpacket_listen6
     end,
     [
-        NkPort || 
-        {NkPort, _Pid} 
+        NkPort ||
+        {NkPort, _Pid}
             <- nklib_proc:values({Tag, Class, Protocol, Transp})
     ].
 
 
 %% @doc Checks if an `uri()' refers to a local started transport.
 %% For ws/wss, it does not check the path
--spec is_local(nklib:uri()) -> 
+-spec is_local(nklib:uri()) ->
     boolean().
 
 is_local(Uri) ->
@@ -616,7 +617,7 @@ is_local(Uri) ->
 
 %% @doc Checks if an `uri()' refers to a local started transport.
 %% For ws/wss, it does not check the path
--spec is_local(nklib:uri(), #{class=>class(), no_dns_cache=>boolean()}) -> 
+-spec is_local(nklib:uri(), #{class=>class(), no_dns_cache=>boolean()}) ->
     boolean().
 
 is_local(#uri{}=Uri, Opts) ->
@@ -642,7 +643,7 @@ is_local(Listen, [#nkconn{protocol=Protocol, transp=Transp, port=0}=Conn|Rest], 
         error ->
             is_local(Listen, Rest, LocalIps)
     end;
-    
+
 is_local(Listen, [#nkconn{transp=Transp, ip=Ip, port=Port}|Rest], LocalIps) ->
     case lists:member(Ip, LocalIps) of
         true ->
@@ -650,17 +651,17 @@ is_local(Listen, [#nkconn{transp=Transp, ip=Ip, port=Port}|Rest], LocalIps) ->
                 true ->
                     true;
                 false ->
-                    case 
+                    case
                         is_tuple(Ip) andalso size(Ip)==4 andalso
-                        lists:member({Transp, {0,0,0,0}, Port}, Listen) 
+                        lists:member({Transp, {0,0,0,0}, Port}, Listen)
                     of
-                        true -> 
+                        true ->
                             true;
-                        false -> 
-                            case 
+                        false ->
+                            case
                                 is_tuple(Ip) andalso size(Ip)==8 andalso
-                                lists:member({Transp, {0,0,0,0,0,0,0,0}, Port}, 
-                                                Listen) 
+                                lists:member({Transp, {0,0,0,0,0,0,0,0}, Port},
+                                                Listen)
                             of
                                 true -> true;
                                 false -> is_local(Listen, Rest, LocalIps)
@@ -676,7 +677,7 @@ is_local(_, [], _) ->
 
 
 %% @doc Checks if an IP is local to this node.
--spec is_local_ip(inet:ip_address()) -> 
+-spec is_local_ip(inet:ip_address()) ->
     boolean().
 
 is_local_ip({0,0,0,0}) ->
