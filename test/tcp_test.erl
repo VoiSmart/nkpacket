@@ -25,6 +25,7 @@
 -compile(nowarn_export_all).
 -include_lib("eunit/include/eunit.hrl").
 -include("nkpacket.hrl").
+-include_lib("nklib/include/nklib.hrl").
 
 tcp_test_() ->
   	{setup, spawn, 
