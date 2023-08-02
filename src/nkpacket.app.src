@@ -16,6 +16,7 @@
         cowboy,
         gun
     ]},
+    {optional_applications, [gun]},
     {env, [
     ]}
 ]}.
